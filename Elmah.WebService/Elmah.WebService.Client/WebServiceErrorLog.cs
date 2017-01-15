@@ -1,15 +1,17 @@
 ﻿using Elmah.WebService.Client;
+using Elmah.WebService.Client.Interfaces;
 using System;
 using System.Collections;
 using System.Collections.Specialized;
 using System.Configuration;
-
+using System.Linq;
+using System.Reflection;
 
 namespace Elmah
 {
     public class WebServiceErrorLog : ErrorLog
     {
-        
+
         ElmahWSClient elmahWsClient;
         /// <summary>
         /// Initializes a new instance of the <see cref="WebServiceErrorLog"/> class
@@ -20,10 +22,42 @@ namespace Elmah
             if (config == null)
                 throw new ArgumentNullException("config");
 
+            var appName = (string)config["applicationName"] ?? string.Empty;
 
-            var url = GetElmahWSClientProperty<string>(config, "WebServiceUrl", false, "");
-            var urltimeout = GetElmahWSClientProperty<int>(config, "WebServiceUrlTimeout", true, 5); //use a 5 second timeout as elmah 1.2 does not log asynchronously and logging this error will block the client until it completes or times out. 
-            var useCompression = GetElmahWSClientProperty<bool>(config, "WebServiceUseCompression", true, true);
+            string url;
+            int urltimeout;
+            bool useCompression;
+            string configProviderType = GetElmahWSClientProperty<string>(config, "ConfigurationProviderType", false, "");
+
+            if (configProviderType != "")
+
+            {
+
+
+                var configurationProvider = GetConfigurationProvider(configProviderType);
+
+                if (configurationProvider != null)
+                {
+
+                    IConfigurationProvider configurationProviderInstance = (IConfigurationProvider)configurationProvider;
+
+                    url = configurationProviderInstance.GetWebServiceUrl();
+                    urltimeout = configurationProviderInstance.GetWebServiceUrlTimeout();
+                    useCompression = configurationProviderInstance.GetWebServiceUseCompression();
+                    elmahWsClient = new ElmahWSClient(url, urltimeout, useCompression);
+
+                    return;
+
+                }
+
+
+
+
+            }
+
+            url = GetElmahWSClientProperty<string>(config, "WebServiceUrl", false, "");
+            urltimeout = GetElmahWSClientProperty<int>(config, "WebServiceUrlTimeout", true, 5); //use a 5 second timeout as elmah 1.2 does not log asynchronously and logging this error will block the client until it completes or times out. 
+            useCompression = GetElmahWSClientProperty<bool>(config, "WebServiceUseCompression", true, true);
             elmahWsClient = new ElmahWSClient(url, urltimeout, useCompression);
 
 
@@ -32,7 +66,7 @@ namespace Elmah
             // per-application isolation over a single store.
             //
 
-            var appName = (string)config["applicationName"] ?? string.Empty;
+
 
         }
 
@@ -41,10 +75,25 @@ namespace Elmah
         /// to use a specific connection string for connecting to the database.
         /// </summary>
 
+        private object GetConfigurationProvider(string configProviderTypeName)
+        {
+
+
+            Type configProvider = (from assembly in AppDomain.CurrentDomain.GetAssemblies()
+                                  from type in assembly.GetTypes()
+                                  where type.FullName == configProviderTypeName
+                                  select type).FirstOrDefault<Type>();
+
+            return Activator.CreateInstance(configProvider);
+
+            
+        }
+
+
 
         public void ThrowClientException()
         {
-            
+
             throw new NotImplementedException("You should not be trying to view elmah logs on this front facing webserver.");
 
         }
@@ -71,9 +120,9 @@ namespace Elmah
                 throw new ArgumentNullException("error");
 
             error.ApplicationName = ApplicationName;
-            
+
             elmahWsClient.SendToServer(error);
-            
+
             return "";
         }
 
@@ -111,7 +160,7 @@ namespace Elmah
 
             if (config.Contains(configKey))
             {
-                
+
                 return (T)(Convert.ChangeType(config[configKey], typeof(T)));
             }
             else
