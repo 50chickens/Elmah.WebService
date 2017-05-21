@@ -12,8 +12,20 @@ this solution contains 3 projects.
 
 configuration. 
 
-added ConfigurationProviderType option in web.config. it specifies a type which implements the IConfigurationProvider interface and has the GetWebServiceUrl, GetWebServiceUrlTimeout, GetWebServiceUseCompression methods to allow for those options to be passed to the ElmahWSClient in the constructor.
+3 possible ways in web.config:
 
+1. <errorLog type="Elmah.WebServiceErrorLog, Elmah.WebService.Client" ConfigObjectName="ElmahLogConfigObject"/>
+ 
+this retrieves a IConfigurationProvider from the asp.net cache using the key "ElmahLogConfigObject". this IConfigurationProvider is used to configure the Elmah.WebService.Client object
+    
+2. <errorLog type="Elmah.WebServiceErrorLog, Elmah.WebService.Client" ConfigurationProviderType="Elmah.WebService.Client.ConfigurationProvider"/>
 
+this creates a new instance of Elmah.WebService.Client.ConfigurationProvider which implements IConfigurationProvider to configure the Elmah.WebService.Client object. 
+    
+3. <errorLog type="Elmah.WebServiceErrorLog, Elmah.WebService.Client" WebServiceUrl="http://localhost/api/elmah" WebServiceUrlTimeout="5" WebServiceUseCompression="true" applicationName="Website Application Name" />-->
+
+these are raw options in web.config used to configure ElmahWSClient class. 
+
+    
 Important: version 1.2 of elmah does not support logging asynchronously. so, if your elmah webservice is slow or down, it will block the exception handling/display on your client website until it either completes or times out.
 If you get pauses during exception logging this is probably why. 
