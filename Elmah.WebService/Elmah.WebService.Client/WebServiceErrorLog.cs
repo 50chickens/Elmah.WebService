@@ -2,17 +2,20 @@
 using Elmah.WebService.Client.Interfaces;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
 using System.Linq;
 using System.Reflection;
+using System.Web;
 
 namespace Elmah
 {
     public class WebServiceErrorLog : ErrorLog
     {
 
-        ElmahWSClient elmahWsClient;
+        ElmahWSClient _ElmahWsClient;
+        IConfigurationProvider _ConfigurationProvider;
         /// <summary>
         /// Initializes a new instance of the <see cref="WebServiceErrorLog"/> class
         /// using a dictionary of configured settings.
@@ -22,50 +25,54 @@ namespace Elmah
             if (config == null)
                 throw new ArgumentNullException("config");
 
-            var appName = (string)config["applicationName"] ?? string.Empty;
+
 
             string url;
             int urltimeout;
             bool useCompression;
-            string configProviderType = GetElmahWSClientProperty<string>(config, "ConfigurationProviderType", false, "");
+            string configProviderType = GetElmahWSClientProperty<string>(config, "ConfigurationProviderType", true, "");
+            string configObjectName = GetElmahWSClientProperty<string>(config, "ConfigObjectName", true, "");
+
 
             if (configProviderType != "")
 
             {
-
-
-                var configurationProvider = GetConfigurationProvider(configProviderType);
-
-                if (configurationProvider != null)
-                {
-
-                    IConfigurationProvider configurationProviderInstance = (IConfigurationProvider)configurationProvider;
-
-                    url = configurationProviderInstance.GetWebServiceUrl();
-                    urltimeout = configurationProviderInstance.GetWebServiceUrlTimeout();
-                    useCompression = configurationProviderInstance.GetWebServiceUseCompression();
-                    elmahWsClient = new ElmahWSClient(url, urltimeout, useCompression);
-
-                    return;
-
-                }
-
-
-
+                _ConfigurationProvider = (IConfigurationProvider)CreateConfigurationProvider(configProviderType);
 
             }
+
+
+
+            if (!string.IsNullOrEmpty(configObjectName))
+            {
+                _ConfigurationProvider = GetConfigurationProviderFromHttpCache(configObjectName);
+            }
+
+            if (_ConfigurationProvider != null)
+            {
+
+             
+                url = _ConfigurationProvider.GetWebServiceUrl();
+                urltimeout = _ConfigurationProvider.GetWebServiceUrlTimeout();
+                useCompression = _ConfigurationProvider.GetWebServiceUseCompression();
+                _ElmahWsClient = new ElmahWSClient(url, urltimeout, useCompression);
+                ApplicationName = _ConfigurationProvider.ApplicationName;
+                return;
+
+            }
+
+
 
             url = GetElmahWSClientProperty<string>(config, "WebServiceUrl", false, "");
             urltimeout = GetElmahWSClientProperty<int>(config, "WebServiceUrlTimeout", true, 5); //use a 5 second timeout as elmah 1.2 does not log asynchronously and logging this error will block the client until it completes or times out. 
             useCompression = GetElmahWSClientProperty<bool>(config, "WebServiceUseCompression", true, true);
-            elmahWsClient = new ElmahWSClient(url, urltimeout, useCompression);
 
-
-            //
-            // Set the application name as this implementation provides
-            // per-application isolation over a single store.
-            //
-
+            if (url != "")
+            {
+                _ElmahWsClient = new ElmahWSClient(url, urltimeout, useCompression);
+            }
+            
+            
 
 
         }
@@ -75,18 +82,69 @@ namespace Elmah
         /// to use a specific connection string for connecting to the database.
         /// </summary>
 
-        private object GetConfigurationProvider(string configProviderTypeName)
+        private IConfigurationProvider GetConfigurationProviderFromHttpCache(string httpCacheObjectName)
+        {
+
+            try
+            {
+                IConfigurationProvider iConfigurationprovider = HttpRuntime.Cache.Get(httpCacheObjectName) as IConfigurationProvider;
+                return iConfigurationprovider;
+            }
+
+            catch (Exception ex)
+            {
+                return null;
+            }
+
+            
+
+            
+
+        }
+
+        private Dictionary<string, string> GetConfigurationDictionaryFromHttpCache(string httpCacheObjectName)
+        {
+
+            if (HttpRuntime.Cache.Get(httpCacheObjectName) as Dictionary<string, string> != null)
+            {
+                try
+                {
+                    Dictionary<string, string> d = (Dictionary<string, string>)HttpRuntime.Cache.Get(httpCacheObjectName);
+
+                    if (!d.ContainsKey("LoggingWebServiceAddress")) return null;
+                    if (!d.ContainsKey("LoggingWebServiceTimeout")) return null;
+                    if (!d.ContainsKey("LoggingWebServiceUseCompression")) return null;
+                    return d;
+                }
+                catch
+                {
+                    return null;
+                }
+
+
+            }
+
+            return null;
+
+
+        }
+
+        static WebServiceErrorLog()
+        {
+
+        }
+        private object CreateConfigurationProvider(string configProviderTypeName)
         {
 
 
             Type configProvider = (from assembly in AppDomain.CurrentDomain.GetAssemblies()
-                                  from type in assembly.GetTypes()
-                                  where type.FullName == configProviderTypeName
-                                  select type).FirstOrDefault<Type>();
+                                   from type in assembly.GetTypes()
+                                   where type.FullName == configProviderTypeName
+                                   select type).FirstOrDefault<Type>();
 
             return Activator.CreateInstance(configProvider);
 
-            
+
         }
 
 
@@ -121,10 +179,16 @@ namespace Elmah
 
             error.ApplicationName = ApplicationName;
 
-            elmahWsClient.SendToServer(error);
+            _ElmahWsClient.SendToServer(error);
 
             return "";
         }
+
+        public override IAsyncResult BeginLog(Error error, AsyncCallback asyncCallback, object asyncState)
+        {
+            return base.BeginLog(error, asyncCallback, asyncState);
+        }
+
 
         /// <summary>
         /// Retrieves a single application error from log given its

@@ -13,6 +13,20 @@ namespace Elmah.WebService.Client
         {
 
         }
+
+        public string ApplicationName
+        {
+            get
+            {
+                return "Application Name";
+            }
+
+            set
+            {
+                ;
+            }
+        }
+
         public string GetWebServiceUrl()
         
         {

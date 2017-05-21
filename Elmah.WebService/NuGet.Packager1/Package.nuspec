@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>Elmah.WebService.Client</id>
-    <version>1.0.0</version>
+    <version>1.0.8</version>
     <title>Elmah.WebService.Client</title>
     <authors>50chickens</authors>
     <owners>Elmah</owners>
@@ -13,7 +13,7 @@
       Community contributed custom target for Elmah.
     </releaseNotes>
     <summary>
-      A short description of the package. If specified, this shows up in the middle pane of the Add Package Dialog. If not specified, a truncated version of the description is used instead.
+      contains the WebServiceError log class which provides an implementation of the Elmah ErrorLog base class. 
     </summary>
     <language>en-US</language>
     <projectUrl>https://nuget.org/packages/NuGet.Packager1</projectUrl>
@@ -24,7 +24,7 @@
     <dependencies>
         <group targetFramework="net40">
           <dependency id="elmah.corelibrary" version="1.2.2" />
-          <dependency id="Microsoft.Net.Http" version="2.0.20710" />
+          <dependency id="System.Net.Http" version="4.0.0" />
           <dependency id="Newtonsoft.Json" version="9.0.1" />
           <dependency id="Microsoft.AspNet.WebApi.Client" version="5.2.3" />
           </group>

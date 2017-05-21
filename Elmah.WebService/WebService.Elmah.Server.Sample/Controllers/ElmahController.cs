@@ -1,4 +1,5 @@
 ﻿using Elmah;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,12 +15,20 @@ namespace WebService.Elmah.Server.Sample.Controllers
     {
         public void Post([FromBody]string xmlError)
         {
-           
+
+
             Error e = ErrorXml.DecodeString(xmlError);
 
-            HttpContext current = HttpContext.Current;
-            ErrorLog.GetDefault(current).Log(e);
-            
+            Dictionary<string, string> configDictionary = new Dictionary<string, string>();
+
+            configDictionary.Add("applicationName", e.ApplicationName);
+
+            string connStr = @"Server=myServerAddress;Database=myDataBase;User Id=xxx;Password=xxx;";
+
+            configDictionary.Add("connectionString", connStr);
+            ErrorLog errorLog = new SqlErrorLog(configDictionary);
+            errorLog.Log(e);
+
 
         }
         
