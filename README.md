@@ -14,15 +14,15 @@ configuration.
 
 3 possible ways in web.config:
 
-1. <errorLog type="Elmah.WebServiceErrorLog, Elmah.WebService.Client" ConfigObjectName="ElmahLogConfigObject"/>
+1. ConfigObjectName="ElmahLogConfigObject"
  
 this retrieves a IConfigurationProvider from the asp.net cache using the key "ElmahLogConfigObject". this IConfigurationProvider is used to configure the Elmah.WebService.Client object
     
-2. <errorLog type="Elmah.WebServiceErrorLog, Elmah.WebService.Client" ConfigurationProviderType="Elmah.WebService.Client.ConfigurationProvider"/>
+2. ConfigurationProviderType="Elmah.WebService.Client.ConfigurationProvider"
 
 this creates a new instance of Elmah.WebService.Client.ConfigurationProvider which implements IConfigurationProvider to configure the Elmah.WebService.Client object. 
     
-3. <errorLog type="Elmah.WebServiceErrorLog, Elmah.WebService.Client" WebServiceUrl="http://localhost/api/elmah" WebServiceUrlTimeout="5" WebServiceUseCompression="true" applicationName="Website Application Name" />-->
+3.  WebServiceUrl="http://localhost/api/elmah" WebServiceUrlTimeout="5" WebServiceUseCompression="true" applicationName="Website Application Name"
 
 these are raw options in web.config used to configure ElmahWSClient class. 
 
